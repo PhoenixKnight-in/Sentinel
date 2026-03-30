@@ -1,5 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import '../domain/question_tree.dart';
+import '../domain/questions_tree.dart';
 import '../domain/report_model.dart';
 
 part 'chatbot_provider.g.dart';
@@ -7,7 +7,7 @@ part 'chatbot_provider.g.dart';
 enum ChatbotStatus { inProgress, submitting, submitted, error }
 
 class ChatbotState {
-  final int currentIndex;          // which question we're on
+  final int currentIndex; // which question we're on
   final Map<QuestionId, String> answers;
   final ChatbotStatus status;
   final String? errorMessage;
@@ -29,10 +29,10 @@ class ChatbotState {
     ChatbotStatus? status,
     String? errorMessage,
   }) => ChatbotState(
-    currentIndex:  currentIndex  ?? this.currentIndex,
-    answers:       answers       ?? this.answers,
-    status:        status        ?? this.status,
-    errorMessage:  errorMessage  ?? this.errorMessage,
+    currentIndex: currentIndex ?? this.currentIndex,
+    answers: answers ?? this.answers,
+    status: status ?? this.status,
+    errorMessage: errorMessage ?? this.errorMessage,
   );
 }
 
@@ -46,7 +46,7 @@ class ChatbotNotifier extends _$ChatbotNotifier {
       ..[questionId] = value;
 
     state = state.copyWith(
-      answers:      updated,
+      answers: updated,
       currentIndex: state.currentIndex + 1,
     );
 
@@ -60,8 +60,8 @@ class ChatbotNotifier extends _$ChatbotNotifier {
       final report = ReportModel(
         incidentType: answers[QuestionId.incidentType]!,
         surroundings: answers[QuestionId.surroundings]!,
-        alertChoice:  answers[QuestionId.alertChoice]!,
-        timestamp:    DateTime.now(),
+        alertChoice: answers[QuestionId.alertChoice]!,
+        timestamp: DateTime.now(),
         // STUB: replace with actual GPS coordinates
         // latitude:  _locationService.current.lat,
         // longitude: _locationService.current.lng,
@@ -73,7 +73,7 @@ class ChatbotNotifier extends _$ChatbotNotifier {
       state = state.copyWith(status: ChatbotStatus.submitted);
     } catch (e) {
       state = state.copyWith(
-        status:       ChatbotStatus.error,
+        status: ChatbotStatus.error,
         errorMessage: e.toString(),
       );
     }

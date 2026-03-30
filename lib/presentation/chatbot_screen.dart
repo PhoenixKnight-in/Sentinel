@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../domain/question_tree.dart';
+import '../domain/questions_tree.dart';
 import '../providers/chatbot_provider.dart';
 import 'widgets/bot_message.dart';
 import 'widgets/option_button.dart';

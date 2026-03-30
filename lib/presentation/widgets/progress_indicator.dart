@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../domain/question_tree.dart';
+import '../../domain/questions_tree.dart';
 
 class ChatProgressIndicator extends StatelessWidget {
   final int currentIndex;
@@ -21,7 +21,7 @@ class ChatProgressIndicator extends StatelessWidget {
           decoration: BoxDecoration(
             color: isActive
                 ? const Color(0xFFFFFFFF)
-                : const Color(0xFFFFFFFF).withOpacity(0.25),
+                : const Color(0xFFFFFFFF).withValues(alpha: 0.25),
             borderRadius: BorderRadius.circular(1.r),
           ),
         );
