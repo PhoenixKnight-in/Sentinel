@@ -1,6 +1,7 @@
   import 'package:flutter/material.dart';
   import 'package:flutter/services.dart';
   import 'package:firebase_core/firebase_core.dart';
+  import 'package:flutter_dotenv/flutter_dotenv.dart';
   import 'screens/calculator_screen.dart';
   import 'firebase_options.dart';
   void main() async {
@@ -11,6 +12,8 @@
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
     ]);
+
+    await dotenv.load(fileName: '.env');
 
     String? firebaseInitError;
     try {
