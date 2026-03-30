@@ -5,15 +5,17 @@ import 'dart:typed_data';
 import 'dart:io';
 
 import '../models/incident.dart';
+import '../services/blockchain_service.dart';
+import '../services/evidence_sync_service.dart';
 import '../services/ipfs_service.dart';
 import '../services/hash_service.dart';
-import '../services/firestore_service.dart';
 import '../services/location_service.dart';
 import '../services/encryption_service.dart';
+import '../services/local_evidence_service.dart';
 
 /// Main evidence reporting screen.
 ///
-/// Flow: Capture → Hash → Upload to IPFS → Store in Firestore
+/// Flow: Capture → Hash → Encrypt → Save locally → Upload when possible
 class ReportScreen extends StatefulWidget {
   const ReportScreen({super.key});
 
@@ -30,6 +32,8 @@ class _ReportScreenState extends State<ReportScreen> {
   String? _previewPath;
   String? _sha256Hash;
   String? _cid;
+  String _evidenceType = 'image';
+  String _mimeType = 'application/octet-stream';
   double? _latitude;
   double? _longitude;
   String _statusMessage = '';
@@ -43,7 +47,7 @@ class _ReportScreenState extends State<ReportScreen> {
 
   // ─── Step 1: Capture Evidence ─────────────────────────────────────────
 
-  Future<void> _captureEvidence(ImageSource source) async {
+  Future<void> _captureImage(ImageSource source) async {
     try {
       final XFile? image = await _picker.pickImage(
         source: source,
@@ -55,17 +59,53 @@ class _ReportScreenState extends State<ReportScreen> {
       if (image == null) return;
 
       final bytes = await image.readAsBytes();
-
-      setState(() {
-        _capturedBytes = bytes;
-        _previewPath = image.path;
-        _sha256Hash = HashService.generateSHA256(bytes);
-        _currentStep = 1; // Move to review step
-        _statusMessage = 'Evidence captured. Hash generated.';
-      });
+      _setCapturedEvidence(
+        bytes: bytes,
+        previewPath: image.path,
+        evidenceType: 'image',
+        mimeType: _inferMimeType(image.path, fallback: 'image/jpeg'),
+      );
     } catch (e) {
       _showError('Failed to capture evidence: $e');
     }
+  }
+
+  Future<void> _captureVideo(ImageSource source) async {
+    try {
+      final XFile? video = await _picker.pickVideo(
+        source: source,
+        maxDuration: const Duration(minutes: 2),
+      );
+
+      if (video == null) return;
+
+      final bytes = await video.readAsBytes();
+      _setCapturedEvidence(
+        bytes: bytes,
+        previewPath: video.path,
+        evidenceType: 'video',
+        mimeType: _inferMimeType(video.path, fallback: 'video/mp4'),
+      );
+    } catch (e) {
+      _showError('Failed to capture evidence: $e');
+    }
+  }
+
+  void _setCapturedEvidence({
+    required Uint8List bytes,
+    required String previewPath,
+    required String evidenceType,
+    required String mimeType,
+  }) {
+    setState(() {
+      _capturedBytes = bytes;
+      _previewPath = previewPath;
+      _evidenceType = evidenceType;
+      _mimeType = mimeType;
+      _sha256Hash = HashService.generateSHA256(bytes);
+      _currentStep = 1;
+      _statusMessage = 'Evidence captured. Hash generated.';
+    });
   }
 
   // ─── Step 2: Upload & Store ───────────────────────────────────────────
@@ -79,10 +119,11 @@ class _ReportScreenState extends State<ReportScreen> {
     });
 
     try {
-      // 1. Fetch location + previous hash concurrently for speed
-      // (use separate typed futures to avoid Future.wait type erasure)
+      final capturedAt = DateTime.now().toUtc();
+
+      // 1. Fetch location + previous local incident concurrently for speed
       final locationFuture = LocationService.getCurrentPosition();
-      final latestIncidentFuture = FirestoreService.getLatestIncident();
+      final latestIncidentFuture = LocalEvidenceService.getLatestIncident();
 
       final position = await locationFuture;
       final latestIncident = await latestIncidentFuture;
@@ -95,50 +136,68 @@ class _ReportScreenState extends State<ReportScreen> {
       );
 
       // 3. Encrypt bytes before upload (AES-256-CBC)
-      //    Hash was already computed from ORIGINAL bytes above — good.
-      //    IPFS will store only the encrypted version.
       setState(() => _statusMessage = 'Encrypting evidence...');
       final encryptedBytes = EncryptionService.encryptBytes(_capturedBytes!);
 
-      // 4. Upload encrypted bytes to IPFS
-      setState(() => _statusMessage = 'Uploading to decentralized storage...');
-      final cid = await IPFSService.uploadToIPFS(
-        encryptedBytes,
-        filename: 'evidence_${DateTime.now().millisecondsSinceEpoch}.enc',
-        mimeType: 'application/octet-stream',
-      );
-
-      // 4. Build incident record
+      // 4. Simulated blockchain trail
       final incidentId = const Uuid().v4();
-      final incident = Incident(
+      final block = BlockchainService.createBlock(
         incidentId: incidentId,
-        cid: cid,
         sha256Hash: chainedHash,
-        timestamp: DateTime.now().toUtc(),
-        latitude: position?.latitude,
-        longitude: position?.longitude,
-        description: _descriptionController.text.trim(),
-        status: cid != null ? 'submitted' : 'pending_upload',
-        evidenceType: 'image',
+        timestamp: capturedAt,
         previousHash: previousHash,
       );
 
-      // 5. Store in Firestore
-      setState(() => _statusMessage = 'Saving to secure database...');
-      await FirestoreService.saveIncident(incident);
+      // 5. Save encrypted evidence locally first
+      setState(() => _statusMessage = 'Saving encrypted evidence locally...');
+      final localFilePath = await LocalEvidenceService.saveEncryptedEvidence(
+        encryptedBytes,
+        incidentId: incidentId,
+        extension: 'enc',
+      );
 
-      // 6. Done — persist location to state for success screen
+      // 6. Build local-first incident record
+      final incident = Incident(
+        incidentId: incidentId,
+        cid: null,
+        sha256Hash: chainedHash,
+        timestamp: capturedAt,
+        latitude: position?.latitude,
+        longitude: position?.longitude,
+        description: _descriptionController.text.trim(),
+        status: 'pending_local',
+        evidenceType: _evidenceType,
+        mimeType: _mimeType,
+        previousHash: previousHash,
+        localFilePath: localFilePath,
+        retryCount: 0,
+        uploadError: null,
+        blockId: block.blockId,
+        blockHash: block.blockHash,
+        simulatedTxId: block.simulatedTxId,
+      );
+
+      await LocalEvidenceService.saveIncident(incident);
+
+      // 7. Try to upload now; if offline, queue remains local
+      setState(() => _statusMessage = 'Syncing evidence when connection is available...');
+      await EvidenceSyncService.instance.syncPendingIncidents();
+      final storedIncident =
+          await LocalEvidenceService.getLatestIncident() ?? incident;
+
       setState(() {
-        _cid = cid;
+        _cid = storedIncident.incidentId == incidentId ? storedIncident.cid : null;
         _latitude = position?.latitude;
         _longitude = position?.longitude;
         _currentStep = 3;
-        _statusMessage = 'Evidence secured successfully!';
+        _statusMessage = storedIncident.cid != null
+            ? 'Evidence secured successfully!'
+            : 'Evidence stored locally and queued for upload.';
       });
     } catch (e) {
       setState(() {
         _currentStep = 1; // Go back to review
-        _statusMessage = 'Upload failed. Evidence hash preserved locally.';
+        _statusMessage = 'Evidence could not be queued safely.';
       });
       _showError('Submission error: $e');
     }
@@ -152,6 +211,8 @@ class _ReportScreenState extends State<ReportScreen> {
       _previewPath = null;
       _sha256Hash = null;
       _cid = null;
+      _evidenceType = 'image';
+      _mimeType = 'application/octet-stream';
       _latitude = null;
       _longitude = null;
       _statusMessage = '';
@@ -252,7 +313,7 @@ class _ReportScreenState extends State<ReportScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Your evidence will be encrypted, hashed, and stored on decentralized storage.',
+              'Your evidence will be encrypted, hashed, saved locally, and uploaded when a connection is available.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
@@ -263,14 +324,28 @@ class _ReportScreenState extends State<ReportScreen> {
             _buildActionButton(
               icon: Icons.camera_alt,
               label: 'Capture from Camera',
-              onPressed: () => _captureEvidence(ImageSource.camera),
+              onPressed: () => _captureImage(ImageSource.camera),
               isPrimary: true,
             ),
             const SizedBox(height: 16),
             _buildActionButton(
               icon: Icons.photo_library,
               label: 'Select from Gallery',
-              onPressed: () => _captureEvidence(ImageSource.gallery),
+              onPressed: () => _captureImage(ImageSource.gallery),
+              isPrimary: false,
+            ),
+            const SizedBox(height: 16),
+            _buildActionButton(
+              icon: Icons.videocam,
+              label: 'Record Video',
+              onPressed: () => _captureVideo(ImageSource.camera),
+              isPrimary: false,
+            ),
+            const SizedBox(height: 16),
+            _buildActionButton(
+              icon: Icons.video_library,
+              label: 'Select Video',
+              onPressed: () => _captureVideo(ImageSource.gallery),
               isPrimary: false,
             ),
           ],
@@ -290,15 +365,38 @@ class _ReportScreenState extends State<ReportScreen> {
         children: [
           // Preview
           if (_previewPath != null)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.file(
-                File(_previewPath!),
-                height: 200,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              ),
-            ),
+            _evidenceType == 'image'
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.file(
+                      File(_previewPath!),
+                      height: 200,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+                  )
+                : Container(
+                    height: 200,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF161B22),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade800),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.videocam,
+                            size: 52, color: Colors.tealAccent),
+                        const SizedBox(height: 12),
+                        Text(
+                          File(_previewPath!).uri.pathSegments.last,
+                          style: TextStyle(color: Colors.grey.shade300),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
           const SizedBox(height: 20),
 
           // Hash display
@@ -318,6 +416,13 @@ class _ReportScreenState extends State<ReportScreen> {
                 ? '${(_capturedBytes!.lengthInBytes / 1024).toStringAsFixed(1)} KB'
                 : 'N/A',
             color: Colors.blueAccent,
+          ),
+          const SizedBox(height: 20),
+          _buildInfoCard(
+            icon: _evidenceType == 'image' ? Icons.image : Icons.videocam,
+            title: 'Evidence Type',
+            value: _evidenceType.toUpperCase(),
+            color: Colors.orangeAccent,
           ),
           const SizedBox(height: 20),
 
@@ -409,7 +514,7 @@ class _ReportScreenState extends State<ReportScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Do not close the app',
+              'The app will retry uploads automatically',
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey.shade600,
@@ -453,6 +558,13 @@ class _ReportScreenState extends State<ReportScreen> {
               title: 'IPFS CID',
               value: _cid!,
               color: Colors.greenAccent,
+            ),
+          if (_cid == null)
+            _buildInfoCard(
+              icon: Icons.save_alt,
+              title: 'Queue Status',
+              value: 'Stored locally and waiting for upload',
+              color: Colors.orangeAccent,
             ),
           const SizedBox(height: 12),
 
@@ -592,5 +704,17 @@ class _ReportScreenState extends State<ReportScreen> {
         ],
       ),
     );
+  }
+
+  String _inferMimeType(String path, {required String fallback}) {
+    final lowerPath = path.toLowerCase();
+    if (lowerPath.endsWith('.png')) return 'image/png';
+    if (lowerPath.endsWith('.jpg') || lowerPath.endsWith('.jpeg')) {
+      return 'image/jpeg';
+    }
+    if (lowerPath.endsWith('.mp4')) return 'video/mp4';
+    if (lowerPath.endsWith('.mov')) return 'video/quicktime';
+    if (lowerPath.endsWith('.mkv')) return 'video/x-matroska';
+    return fallback;
   }
 }

@@ -11,8 +11,15 @@ class Incident {
   final String description;
   final String status; // submitted | verified | flagged
   final String evidenceType; // image | video | audio
+  final String mimeType;
   final String? deviceInfo;
   final String? previousHash; // For future hash-chaining
+  final String? localFilePath;
+  final int retryCount;
+  final String? uploadError;
+  final String blockId;
+  final String blockHash;
+  final String simulatedTxId;
 
   Incident({
     required this.incidentId,
@@ -24,8 +31,15 @@ class Incident {
     this.description = '',
     this.status = 'submitted',
     this.evidenceType = 'image',
+    this.mimeType = 'application/octet-stream',
     this.deviceInfo,
     this.previousHash,
+    this.localFilePath,
+    this.retryCount = 0,
+    this.uploadError,
+    required this.blockId,
+    required this.blockHash,
+    required this.simulatedTxId,
   });
 
   /// Convert to Firestore-compatible map.
@@ -40,8 +54,15 @@ class Incident {
       'description': description,
       'status': status,
       'evidenceType': evidenceType,
+      'mimeType': mimeType,
       'deviceInfo': deviceInfo,
       'previousHash': previousHash,
+      'localFilePath': localFilePath,
+      'retryCount': retryCount,
+      'uploadError': uploadError,
+      'blockId': blockId,
+      'blockHash': blockHash,
+      'simulatedTxId': simulatedTxId,
     };
   }
 
@@ -57,8 +78,15 @@ class Incident {
       description: map['description'] as String? ?? '',
       status: map['status'] as String? ?? 'submitted',
       evidenceType: map['evidenceType'] as String? ?? 'image',
+      mimeType: map['mimeType'] as String? ?? 'application/octet-stream',
       deviceInfo: map['deviceInfo'] as String?,
       previousHash: map['previousHash'] as String?,
+      localFilePath: map['localFilePath'] as String?,
+      retryCount: (map['retryCount'] as num?)?.toInt() ?? 0,
+      uploadError: map['uploadError'] as String?,
+      blockId: map['blockId'] as String? ?? '',
+      blockHash: map['blockHash'] as String? ?? '',
+      simulatedTxId: map['simulatedTxId'] as String? ?? '',
     );
   }
 
@@ -73,8 +101,15 @@ class Incident {
     String? description,
     String? status,
     String? evidenceType,
+    String? mimeType,
     String? deviceInfo,
     String? previousHash,
+    String? localFilePath,
+    int? retryCount,
+    String? uploadError,
+    String? blockId,
+    String? blockHash,
+    String? simulatedTxId,
   }) {
     return Incident(
       incidentId: incidentId ?? this.incidentId,
@@ -86,8 +121,15 @@ class Incident {
       description: description ?? this.description,
       status: status ?? this.status,
       evidenceType: evidenceType ?? this.evidenceType,
+      mimeType: mimeType ?? this.mimeType,
       deviceInfo: deviceInfo ?? this.deviceInfo,
       previousHash: previousHash ?? this.previousHash,
+      localFilePath: localFilePath ?? this.localFilePath,
+      retryCount: retryCount ?? this.retryCount,
+      uploadError: uploadError ?? this.uploadError,
+      blockId: blockId ?? this.blockId,
+      blockHash: blockHash ?? this.blockHash,
+      simulatedTxId: simulatedTxId ?? this.simulatedTxId,
     );
   }
 

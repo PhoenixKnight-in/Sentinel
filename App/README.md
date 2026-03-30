@@ -36,15 +36,19 @@ flutter run --dart-define=SENTINEL_BACKEND_URL=https://your-api.example.com --da
 
 - `lib/main.dart`: app entry point and Firebase init
 - `lib/screens/calculator_screen.dart`: disguised calculator unlock UI
-- `lib/screens/report_screen.dart`: image capture, hashing, encryption, upload
-- `lib/screens/history_screen.dart`: incident history and chain verification
+- `lib/screens/report_screen.dart`: image/video capture, hashing, encryption, local queue
+- `lib/screens/history_screen.dart`: incident history, sync status, chain verification
 - `lib/services/ipfs_service.dart`: backend-facing Storacha upload client
 - `lib/services/encryption_service.dart`: AES encryption before upload
 - `lib/services/hash_service.dart`: SHA-256 and chain hashing
+- `lib/services/local_evidence_service.dart`: SQLite-backed local incident ledger
+- `lib/services/evidence_sync_service.dart`: connectivity-aware upload retry service
+- `lib/services/blockchain_service.dart`: simulated blockchain metadata
 - `lib/services/firestore_service.dart`: metadata persistence
 
 ## Notes
 
 - The Flutter app should not store Storacha private keys or delegation proofs.
 - Evidence is uploaded only after local encryption.
+- Evidence is saved locally first so offline capture is preserved.
 - Firestore stores metadata; Storacha stores encrypted file content.

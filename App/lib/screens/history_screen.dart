@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/incident.dart';
-import '../services/firestore_service.dart';
+import '../services/evidence_sync_service.dart';
 import '../services/ipfs_service.dart';
+import '../services/local_evidence_service.dart';
 
 /// Evidence vault — shows all submitted incidents from Firestore.
 ///
@@ -18,6 +19,8 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen> {
   late Future<List<Incident>> _incidentsFuture;
   bool _chainValid = true;
+  int _queuedCount = 0;
+  int _failedCount = 0;
 
   @override
   void initState() {
@@ -26,8 +29,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Future<List<Incident>> _loadAndVerify() async {
-    final incidents = await FirestoreService.getAllIncidents();
+    final incidents = await LocalEvidenceService.getAllIncidents();
     _chainValid = _verifyChain(incidents);
+    _queuedCount = await LocalEvidenceService.getStatusCount('pending_local') +
+        await LocalEvidenceService.getStatusCount('pending_upload');
+    _failedCount = await LocalEvidenceService.getStatusCount('failed');
     return incidents;
   }
 
@@ -47,6 +53,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
     setState(() {
       _incidentsFuture = _loadAndVerify();
     });
+  }
+
+  Future<void> _retrySync() async {
+    await EvidenceSyncService.instance.syncPendingIncidents();
+    _refresh();
   }
 
   @override
@@ -72,6 +83,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.sync),
+            onPressed: _retrySync,
+            tooltip: 'Retry Uploads',
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _refresh,
@@ -102,6 +118,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             children: [
               // Chain integrity banner
               _buildChainBanner(incidents.length),
+              _buildQueueBanner(),
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: () async => _refresh(),
@@ -153,6 +170,47 @@ class _HistoryScreenState extends State<HistoryScreen> {
               style: TextStyle(
                 fontSize: 12,
                 color: _chainValid ? Colors.tealAccent : Colors.redAccent,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQueueBanner() {
+    final hasIssues = _queuedCount > 0 || _failedCount > 0;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: hasIssues
+            ? Colors.orangeAccent.withValues(alpha: 0.08)
+            : Colors.greenAccent.withValues(alpha: 0.08),
+        border: Border.all(
+          color: hasIssues
+              ? Colors.orangeAccent.shade200
+              : Colors.greenAccent.shade200,
+        ),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            hasIssues ? Icons.sync_problem : Icons.cloud_done,
+            color: hasIssues ? Colors.orangeAccent : Colors.greenAccent,
+            size: 18,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              hasIssues
+                  ? 'Queued: $_queuedCount   Failed: $_failedCount   Tap sync to retry uploads.'
+                  : 'All locally stored evidence is synced.',
+              style: TextStyle(
+                fontSize: 12,
+                color: hasIssues ? Colors.orangeAccent : Colors.greenAccent,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -272,9 +330,21 @@ class _HistoryScreenState extends State<HistoryScreen> {
         color = Colors.greenAccent;
         icon = Icons.check_circle_outline;
         break;
+      case 'uploaded':
+        color = Colors.greenAccent;
+        icon = Icons.cloud_done;
+        break;
       case 'pending_upload':
         color = Colors.orangeAccent;
         icon = Icons.cloud_off;
+        break;
+      case 'pending_local':
+        color = Colors.orangeAccent;
+        icon = Icons.save_alt;
+        break;
+      case 'failed':
+        color = Colors.redAccent;
+        icon = Icons.error_outline;
         break;
       case 'verified':
         color = Colors.tealAccent;
@@ -449,10 +519,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
               _buildDetailRow('SHA-256 Hash', incident.sha256Hash),
               if (incident.previousHash != null)
                 _buildDetailRow('Previous Hash', incident.previousHash!),
+              _buildDetailRow('Local File', incident.localFilePath ?? 'Unavailable'),
+              _buildDetailRow('Retry Count', incident.retryCount.toString()),
+              _buildDetailRow('Block ID', incident.blockId),
+              _buildDetailRow('Block Hash', incident.blockHash),
+              _buildDetailRow('Simulated TX', incident.simulatedTxId),
               if (incident.cid != null)
                 _buildDetailRow('IPFS CID', incident.cid!),
               if (incident.description.isNotEmpty)
                 _buildDetailRow('Description', incident.description),
+              if (incident.uploadError != null)
+                _buildDetailRow('Upload Note', incident.uploadError!),
 
               const SizedBox(height: 20),
 

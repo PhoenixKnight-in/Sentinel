@@ -4,6 +4,8 @@
   import 'package:flutter_dotenv/flutter_dotenv.dart';
   import 'screens/calculator_screen.dart';
   import 'firebase_options.dart';
+  import 'services/evidence_sync_service.dart';
+  import 'services/local_evidence_service.dart';
   void main() async {
     WidgetsFlutterBinding.ensureInitialized();
 
@@ -14,6 +16,8 @@
     ]);
 
     await dotenv.load(fileName: '.env');
+    await LocalEvidenceService.initialize();
+    await EvidenceSyncService.instance.initialize();
 
     String? firebaseInitError;
     try {
