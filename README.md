@@ -1,4 +1,4 @@
-# safecalc
+# sentinal
 
 A new Flutter project.
 
