@@ -69,7 +69,7 @@ class _QuestionView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ChatProgressIndicator(currentIndex: state.currentIndex),
+                ci.ChatProgressIndicator(currentIndex: state.currentIndex),
                 SizedBox(height: 24.h),
 
                 // Previous answer shown above question
@@ -81,7 +81,7 @@ class _QuestionView extends StatelessWidget {
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 13.sp,
-                        color: const Color(0xFFFFFFFF).withOpacity(0.35),
+                        color: const Color(0xFFFFFFFF).withValues(alpha: 0.35),
                       ),
                     ),
                   ),
@@ -115,7 +115,9 @@ class _QuestionView extends StatelessWidget {
                           height: 6.r,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: const Color(0xFFFFFFFF).withOpacity(0.35),
+                            color: const Color(
+                              0xFFFFFFFF,
+                            ).withValues(alpha: 0.35),
                           ),
                         ),
                         SizedBox(width: 6.w),
@@ -124,7 +126,9 @@ class _QuestionView extends StatelessWidget {
                           style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 12.sp,
-                            color: const Color(0xFFFFFFFF).withOpacity(0.35),
+                            color: const Color(
+                              0xFFFFFFFF,
+                            ).withValues(alpha: 0.35),
                           ),
                         ),
                       ],
@@ -136,7 +140,10 @@ class _QuestionView extends StatelessWidget {
         ),
 
         // ── Divider ─────────────────────────────────────────
-        Container(height: 1, color: const Color(0xFFFFFFFF).withOpacity(0.1)),
+        Container(
+          height: 1,
+          color: const Color(0xFFFFFFFF).withValues(alpha: 0.1),
+        ),
 
         // ── Bottom half — circle options ─────────────────────
         SizedBox(
@@ -202,7 +209,7 @@ class _SubmittingView extends StatelessWidget {
             style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 16.sp,
-              color: const Color(0xFFFFFFFF).withOpacity(0.7),
+              color: const Color(0xFFFFFFFF).withValues(alpha: 0.7),
             ),
           ),
         ],
@@ -252,7 +259,7 @@ class _ConfirmedView extends StatelessWidget {
             style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 15.sp,
-              color: const Color(0xFFFFFFFF).withOpacity(0.55),
+              color: const Color(0xFFFFFFFF).withValues(alpha: 0.55),
             ),
           ),
         ],
@@ -275,7 +282,7 @@ class _ErrorView extends StatelessWidget {
         style: TextStyle(
           fontFamily: 'Inter',
           fontSize: 16.sp,
-          color: const Color(0xFFFFFFFF).withOpacity(0.7),
+          color: const Color(0xFFFFFFFF).withValues(alpha: 0.7),
         ),
       ),
     );
