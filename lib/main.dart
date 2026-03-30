@@ -6,6 +6,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'home_page.dart'; // MainHomePage, MapDecoyPage, AppColors, serif(), route constants
 import 'report_status_page.dart'; // ReportStatusPage
 import 'chatbot/chatbot_main.dart'; // re-exports ChatbotScreen
+import "calculator.dart";
 
 // ── Uncomment as you connect the remaining pages ──────────────────────────────
 // import 'evidence/main.dart';   // re-exports EvidenceUploadPage
@@ -103,7 +104,7 @@ class SafeTraceApp extends StatelessWidget {
         ),
 
         // ── Routing ────────────────────────────────────────────────────────────
-        initialRoute: kRouteHome,
+        initialRoute: kRouteCalculator,
 
         routes: {
           // Hub
@@ -120,7 +121,7 @@ class SafeTraceApp extends StatelessWidget {
 
           // ── Remaining pages — uncomment as you connect them ─────────────────
           // kRouteEvidence:   (_) => const EvidenceUploadPage(),
-          // kRouteCalculator: (_) => const CalculatorPage(),
+          kRouteCalculator: (_) => const CalculatorScreen(),
         },
 
         // Fallback for any unknown route
