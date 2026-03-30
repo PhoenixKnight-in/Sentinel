@@ -6,6 +6,7 @@ import '../providers/chatbot_provider.dart';
 import 'widgets/bot_message.dart';
 import 'widgets/option_button.dart';
 import 'widgets/progress_indicator.dart' as ci;
+import '../../home_page.dart';
 
 class ChatbotScreen extends ConsumerWidget {
   const ChatbotScreen({super.key});
@@ -252,6 +253,32 @@ class _ConfirmedView extends StatelessWidget {
               fontFamily: 'Inter',
               fontSize: 15.sp,
               color: const Color(0xFFFFFFFF).withValues(alpha: 0.55),
+            ),
+          ),
+          GestureDetector(
+            onTap: () => Navigator.pushNamedAndRemoveUntil(
+              context,
+              kRouteHome,
+              (_) => false,
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.6),
+                  width: 1,
+                ),
+                borderRadius: BorderRadius.circular(30),
+              ),
+              child: Text(
+                'Go home',
+                style: TextStyle(
+                  fontFamily: 'Georgia',
+                  fontSize: 13.sp,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ),
         ],
