@@ -21,11 +21,11 @@ class OptionButton extends StatelessWidget {
   double get _diameter {
     switch (size) {
       case CircleSize.large:
-        return 100.r;
+        return 120.r;
       case CircleSize.medium:
-        return 82.r;
+        return 100.r;
       case CircleSize.small:
-        return 70.r;
+        return 80.r;
     }
   }
 
@@ -55,7 +55,7 @@ class OptionButton extends StatelessWidget {
           shape: BoxShape.circle,
           color: Colors.transparent,
           border: Border.all(
-            color: const Color(0xFFFFFFFF).withOpacity(0.85),
+            color: const Color(0xFFFFFFFF).withValues(alpha: 0.85),
             width: 1.2,
           ),
         ),

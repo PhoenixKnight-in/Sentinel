@@ -15,7 +15,7 @@ class ChatbotScreen extends ConsumerWidget {
     final state = ref.watch(chatbotNotifierProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0A1628), // deep navy
+      backgroundColor: const Color(0xFF0A1628),
       body: SafeArea(
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 20.h),
@@ -31,26 +31,21 @@ class ChatbotScreen extends ConsumerWidget {
   }
 }
 
-// ── Question view ──────────────────────────────────────────
-
 class _QuestionView extends StatelessWidget {
   final ChatbotState state;
   final WidgetRef ref;
 
   const _QuestionView({required this.state, required this.ref});
 
-  // Decides circle size based on how many options exist
   CircleSize _sizeFor(int count) {
     if (count <= 2) return CircleSize.large;
-    if (count == 3) return CircleSize.medium;
+    if (count <= 4) return CircleSize.large;
     return CircleSize.small;
   }
 
-  // Splits options list into rows for the circle grid
   List<List<Option>> _rows(List<Option> opts) {
     if (opts.length <= 2) return [opts];
     if (opts.length == 3) return [opts.sublist(0, 2), opts.sublist(2)];
-    // 4 options → 2x2
     return [opts.sublist(0, 2), opts.sublist(2, 4)];
   }
 
@@ -64,15 +59,15 @@ class _QuestionView extends StatelessWidget {
       children: [
         // ── Top half — question ─────────────────────────────
         Expanded(
+          flex: 1,
           child: Padding(
-            padding: EdgeInsets.fromLTRB(28.w, 0, 28.w, 28.h),
+            padding: EdgeInsets.fromLTRB(28.w, 0, 28.w, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ci.ChatProgressIndicator(currentIndex: state.currentIndex),
                 SizedBox(height: 24.h),
 
-                // Previous answer shown above question
                 if (state.answers.isNotEmpty)
                   Padding(
                     padding: EdgeInsets.only(bottom: 10.h),
@@ -88,7 +83,6 @@ class _QuestionView extends StatelessWidget {
 
                 const Spacer(),
 
-                // The question — large, bottom-anchored in top half
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 250),
                   child: Text(
@@ -104,7 +98,6 @@ class _QuestionView extends StatelessWidget {
                   ),
                 ),
 
-                // GPS tag — only on location question
                 if (question.id == QuestionId.location)
                   Padding(
                     padding: EdgeInsets.only(top: 12.h),
@@ -134,6 +127,8 @@ class _QuestionView extends StatelessWidget {
                       ],
                     ),
                   ),
+
+                SizedBox(height: 24.h),
               ],
             ),
           ),
@@ -146,41 +141,38 @@ class _QuestionView extends StatelessWidget {
         ),
 
         // ── Bottom half — circle options ─────────────────────
-        SizedBox(
-          height: 280.h,
-          child: Center(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 250),
-              child: Column(
-                key: ValueKey(question.id),
-                mainAxisSize: MainAxisSize.min,
-                children: rows
-                    .map(
-                      (row) => Padding(
-                        padding: EdgeInsets.only(bottom: 12.h),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: row
-                              .map(
-                                (option) => Padding(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 6.w,
-                                  ),
-                                  child: OptionButton(
-                                    label: option.label,
-                                    size: sz,
-                                    onTap: () => ref
-                                        .read(chatbotNotifierProvider.notifier)
-                                        .answer(question.id, option.value),
-                                  ),
+        Expanded(
+          flex: 2,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            child: Column(
+              key: ValueKey(question.id),
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: rows
+                  .map(
+                    (row) => Padding(
+                      padding: EdgeInsets.only(bottom: 12.h),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: row
+                            .map(
+                              (option) => Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 6.w),
+                                child: OptionButton(
+                                  label: option.label,
+                                  size: sz,
+                                  onTap: () => ref
+                                      .read(chatbotNotifierProvider.notifier)
+                                      .answer(question.id, option.value),
                                 ),
-                              )
-                              .toList(),
-                        ),
+                              ),
+                            )
+                            .toList(),
                       ),
-                    )
-                    .toList(),
-              ),
+                    ),
+                  )
+                  .toList(),
             ),
           ),
         ),
@@ -188,6 +180,7 @@ class _QuestionView extends StatelessWidget {
     );
   }
 }
+
 // ── Submitting view ─────────────────────────────────────────
 
 class _SubmittingView extends StatelessWidget {
@@ -201,7 +194,7 @@ class _SubmittingView extends StatelessWidget {
         children: [
           const CircularProgressIndicator(
             color: Color(0xFFFFFFFF),
-            strokeWidth: 1.5, // thin line — matches your line aesthetic
+            strokeWidth: 1.5,
           ),
           SizedBox(height: 24.h),
           Text(
@@ -229,7 +222,6 @@ class _ConfirmedView extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Line-style checkmark — matches your aesthetic
           Container(
             width: 72.w,
             height: 72.w,
